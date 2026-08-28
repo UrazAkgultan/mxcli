@@ -90,14 +90,18 @@ func execCreateNavigation(ctx *ExecContext, s *ast.CreateNavigationStmt) error {
 		// User-Agent — not on viewport width — so a device-specific front end could
 		// not be built from MDL at all (ako/mxcli-maintenance §7).
 		//
-		// Mendix's web profiles are a closed set, so an unknown name is still an
-		// error: creating "Phone" is adding the profile the platform defines,
-		// while creating "Mobile" would be inventing one that can never route.
+		// Mendix's web and native profiles are both closed sets, so an unknown
+		// name is still an error: creating "Phone" or "NativePhone" is adding a
+		// profile the platform defines, while creating "Mobile" would be
+		// inventing one that can never route.
 		kind, ok := types.CanonicalProfileKind(s.ProfileName)
 		if !ok {
+			kind, ok = types.CanonicalNativeProfileKind(s.ProfileName)
+		}
+		if !ok {
 			return mdlerrors.NewNotFoundMsg("navigation profile", s.ProfileName,
-				fmt.Sprintf("navigation profile not found: %s (available: %s; Mendix's web profiles are %s)",
-					s.ProfileName, profileNames(nav), strings.Join(types.WebProfileKindNames(), ", ")))
+				fmt.Sprintf("navigation profile not found: %s (available: %s; Mendix's web profiles are %s, and its native profiles are %s)",
+					s.ProfileName, profileNames(nav), strings.Join(types.WebProfileKindNames(), ", "), strings.Join(types.NativeProfileKindNames(), ", ")))
 		}
 		if err := ctx.Backend.AddNavigationProfile(nav.ID, kind); err != nil {
 			return mdlerrors.NewBackend("create navigation profile", err)

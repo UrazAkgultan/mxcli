@@ -1443,6 +1443,19 @@ Headline: **Widgets become first-class MDL rather than a second dialect.** Every
 
 - **`make digest-status` measures how far the bug-pattern digest has fallen behind**, per area — coverage is computed rather than quoted, because a figure written into prose is stale the next time anyone appends a finding.
 
+- **`create navigation NativePhone`** — the native counterpart to web navigation
+  profile creation (`f2e7c67a`, `b032ec05`). A native profile has no `Kind`
+  property at all (`Navigation$NativeNavigationProfile`, identified purely by
+  `$Type` + `Name`), so it gets its own builder rather than a branch in the web
+  one. Unlike the web kinds, no live Studio Pro create-and-read-back exists for
+  native profiles (PED/MCP explicitly rejects native profile authoring), so the
+  shape is pinned against a real Studio-Pro-authored NativePhone profile instead
+  — see the doc comment on `newNativeProfileBson`. `UpdateNavigationProfile`
+  does not yet write bottom bar menu items for native profiles (a separate,
+  tracked gap): a home page whose layout requires a bottom bar entry needs it
+  added in Studio Pro until that gap closes (CE6108). Hybrid remains
+  unsupported — no reference document exists for it either.
+
 ### Changed
 
 - **A generated domain model is laid out, not stacked in one row** — every `CREATE ENTITY` with no `@Position` used the same *y*, so a 40-entity model opened in Studio Pro as a single horizontal line 6,950px wide with the boxes overlapping, since the 150px step is narrower than an entity box. Unreadable at any zoom (reported against a 40-entity model on 11.13).

@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // UpdateNavigationProfile patches a navigation profile's home pages, login page,
@@ -82,7 +83,11 @@ func (b *Backend) UpdateNavigationProfile(navDocID model.ID, profileName string,
 		}
 		found = true
 		if navGetString(profDoc, "$Type") == "Navigation$NativeNavigationProfile" {
-			profiles[i] = navPatchNativeProfile(profDoc, spec)
+			patched, perr := navPatchNativeProfile(profDoc, spec)
+			if perr != nil {
+				return fmt.Errorf("UpdateNavigationProfile: %w", perr)
+			}
+			profiles[i] = patched
 		} else {
 			patched, err := navPatchWebProfile(profDoc, spec)
 			if err != nil {
@@ -324,7 +329,7 @@ func navGetDoc(doc bson.D, key string) bson.D {
 	return nil
 }
 
-func navPatchNativeProfile(doc bson.D, spec types.NavigationProfileSpec) bson.D {
+func navPatchNativeProfile(doc bson.D, spec types.NavigationProfileSpec) (bson.D, error) {
 	// Patch a copy: navSetField writes in place, and a caller's stored profile
 	// must not change under it when no field is appended.
 	doc = append(bson.D(nil), doc...)
@@ -369,13 +374,128 @@ func navPatchNativeProfile(doc bson.D, spec types.NavigationProfileSpec) bson.D 
 
 	// A native profile stores its offline configs as a web profile does. The
 	// executor refuses the clauses this writer cannot apply to a native
-	// profile (its bottom bar, login and not-found pages, on sync error), so
-	// none is ignored in silence (ako/mxcli#980).
+	// profile (login and not-found pages, on sync error), so none is ignored
+	// in silence (ako/mxcli#980).
 	if spec.HasSync {
 		doc = navSetField(doc, "OfflineEntityConfigs",
 			navOfflineConfigs(navGetArray(doc, "OfflineEntityConfigs"), spec.OfflineEntities))
 	}
-	return doc
+	if spec.HasMenu {
+		barItems := bson.A{int32(2)}
+		for _, mi := range spec.MenuItems {
+			bar, err := navBottomBarItemBson(mi)
+			if err != nil {
+				return nil, err
+			}
+			barItems = append(barItems, bar)
+		}
+		doc = navSetField(doc, "BottomBarItems", barItems)
+	}
+	return doc, nil
+}
+
+// navBottomBarItemBson builds a NativePages$BottomBarItem from a menu item spec.
+//
+// Mendix's native bottom bar is flat and page-only — NativePages$BottomBarItem
+// (modelsdk/gen/nativepages) has no Items property (no sub-menus, unlike the web
+// Menu's Menus$MenuItem) and its only navigation target is Page, a by-name
+// reference to Forms$Page (its pre-8.15.0 Action property, which could carry a
+// microflow action, is gone on every Mendix version this project targets — see
+// nativepages.VersionInfos). A spec built from MDL's shared NavMenuItemSpec can
+// carry either of those, so both are rejected explicitly rather than silently
+// dropped, matching this project's "no silent unsupported migrations" stance.
+//
+// Icon is deliberately never written here. The one real reference document
+// (native-pwa-migrator's fixtures/native-phone-minimal) has a Forms$GlyphIcon on
+// its bottom bar item, but that is this fixture author's choice, not a Studio
+// Pro create-time default — nativepages.VersionInfos does not mark "caption"'s
+// sibling "icon" as Required, and the web Menu's ICON clause only ever builds a
+// Forms$IconCollectionIcon (navMenuIconBson), which has never been confirmed to
+// be a valid choice for a native BottomBarItem specifically (a different
+// convention on the native side is exactly what the fixture's GlyphIcon shows).
+// Emitting an unconfirmed shape risks the failure this project exists to avoid —
+// a document that builds clean and will not open in Studio Pro — so an ICON
+// clause on a native menu item is rejected until a real Studio-Pro-authored
+// IconCollectionIcon bottom bar item is found to pin it against.
+func navBottomBarItemBson(mi types.NavMenuItemSpec) (bson.D, error) {
+	if len(mi.Items) > 0 {
+		return nil, fmt.Errorf("native bottom bar item %q: sub-items are not supported — Mendix's native bottom bar menu is flat", mi.Caption)
+	}
+	page, err := navBottomBarPage(mi)
+	if err != nil {
+		return nil, err
+	}
+	if mi.Icon != "" {
+		return nil, fmt.Errorf("native bottom bar item %q: ICON is not supported yet — Forms$IconCollectionIcon is unconfirmed for native bottom bar items; set it in Studio Pro", mi.Caption)
+	}
+	return bson.D{
+		{Key: "$ID", Value: navID()},
+		{Key: "$Type", Value: "NativePages$BottomBarItem"},
+		{Key: "Caption", Value: navBottomBarCaptionBson(mi.Caption)},
+		{Key: "Icon", Value: nil},
+		{Key: "Page", Value: page},
+	}, nil
+}
+
+// navBottomBarPage is the page a bottom bar item opens. The executor hands the
+// item's OnClick over as a built client action (ako/mxcli#980), a caller other
+// than the executor only the legacy Page target; either way the only action a
+// BottomBarItem can store is a by-name Page, so every other one — a microflow,
+// nanoflow, sign out, an action kept from storage — is refused rather than
+// written as nothing.
+func navBottomBarPage(mi types.NavMenuItemSpec) (string, error) {
+	refuse := func(what string) (string, error) {
+		return "", fmt.Errorf("native bottom bar item %q: %s is not supported — the native bottom bar can only open a page", mi.Caption, what)
+	}
+	switch {
+	case len(mi.KeepAction) > 0:
+		return refuse("a stored action the item does not restate")
+	case mi.Microflow != "":
+		return refuse("a microflow target")
+	case mi.SignOut:
+		return refuse("sign out")
+	}
+	page := mi.Page
+	switch a := mi.Action.(type) {
+	case nil, *pages.NoClientAction:
+	case *pages.PageClientAction:
+		if len(a.ParameterMappings) > 0 {
+			return refuse("a page argument")
+		}
+		page = a.PageName
+	default:
+		return refuse(fmt.Sprintf("the action %T", a))
+	}
+	if page == "" {
+		return "", fmt.Errorf("native bottom bar item %q: a page target is required — the native bottom bar has no other action", mi.Caption)
+	}
+	return page, nil
+}
+
+// navBottomBarCaptionBson builds a BottomBarItem's Caption (Texts$Text).
+//
+// Deliberately NOT navCaptionBson: that helper's Items marker is 1, but the
+// native-phone-minimal fixture's own Texts$Text.Items — on this same
+// BottomBarItem's Caption, on its sibling MenuItem's Caption, and on the web
+// profile's AppTitle — is uniformly marker 3 (confirmed by dumping the fixture's
+// raw BSON), matching modelsdk/codec's own default for an unregistered PartList
+// child type (Texts$Translation has no codec.RegisterListMarker override).
+// navCaptionBson's marker 1 was not re-verified here — it is a separate,
+// pre-existing write path (web menu captions) outside this change's scope.
+func navBottomBarCaptionBson(text string) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: navID()},
+		{Key: "$Type", Value: "Texts$Text"},
+		{Key: "Items", Value: bson.A{
+			int32(3),
+			bson.D{
+				{Key: "$ID", Value: navID()},
+				{Key: "$Type", Value: "Texts$Translation"},
+				{Key: "LanguageCode", Value: model.AuthoringLanguage()},
+				{Key: "Text", Value: text},
+			},
+		}},
+	}
 }
 
 // navMergeRoleHomes is a profile's role-based home pages after a statement that

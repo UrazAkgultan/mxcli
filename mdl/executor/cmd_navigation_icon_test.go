@@ -19,6 +19,13 @@ func menuMDL(items []*types.NavMenuItem) string {
 	return b.String()
 }
 
+// nativeMenuMDL is menuMDL for a NativePhone profile's bottom bar.
+func nativeMenuMDL(items []*types.NavMenuItem) string {
+	var b bytes.Buffer
+	printMenuMDLFor(nil, &b, items, 0, "CREATE NAVIGATION", true)
+	return b.String()
+}
+
 // DESCRIBE emits re-executable MDL, so an icon it read must come back out — the
 // alternative is output that silently rewrites the menu when replayed. The
 // hyphenated segment has to be re-quoted: `align-center` lexes as HYPHENATED_ID,
@@ -134,6 +141,26 @@ func TestPrintMenuMDL_StillFlagsWhatItCannotRebuild(t *testing.T) {
 				t.Errorf("dropped silently: %q", got)
 			}
 		})
+	}
+}
+
+// A native profile's bottom bar cannot author ANY icon yet (navBottomBarItemBson
+// rejects ICON unconditionally) — including an IconCollectionIcon, which the web
+// Menu reproduces fine. DESCRIBE must flag it instead of emitting a clause that
+// would fail on replay.
+func TestPrintMenuMDL_NativeNeverEmitsAnIconClause(t *testing.T) {
+	got := nativeMenuMDL([]*types.NavMenuItem{{
+		Caption:  "Home",
+		Page:     "NativeMobile.Home_Native",
+		Icon:     "Atlas_Core.Atlas.home",
+		IconType: "Forms$IconCollectionIcon",
+	}})
+	stmt := strings.SplitN(got, "\n", 2)[0]
+	if strings.Contains(stmt, " icon ") {
+		t.Errorf("emitted an ICON clause for a native bottom bar item, which replay would reject: %q", got)
+	}
+	if !strings.Contains(got, "-- icon") || !strings.Contains(got, "Atlas_Core.Atlas.home") {
+		t.Errorf("the unreproducible native icon was dropped silently: %q", got)
 	}
 }
 

@@ -1451,10 +1451,15 @@ Headline: **Widgets become first-class MDL rather than a second dialect.** Every
   native profiles (PED/MCP explicitly rejects native profile authoring), so the
   shape is pinned against a real Studio-Pro-authored NativePhone profile instead
   — see the doc comment on `newNativeProfileBson`. `UpdateNavigationProfile`
-  does not yet write bottom bar menu items for native profiles (a separate,
-  tracked gap): a home page whose layout requires a bottom bar entry needs it
-  added in Studio Pro until that gap closes (CE6108). Hybrid remains
-  unsupported — no reference document exists for it either.
+  now writes bottom bar menu items too (`NativePages$BottomBarItem`), reusing
+  the profile's `{ }` block as the web kinds do — so a home page whose layout
+  requires a bottom bar can be added to it directly, clearing **CE6108**
+  instead of needing Studio Pro. The native bottom bar is flat and page-only,
+  unlike the web `Menu`: a nested `MENU 'caption' { … }` group, an `OnClick`
+  other than `SHOW PAGE`, or an `Icon:` on a native menu item is rejected rather than
+  guessed at — see the doc comment on `navBottomBarItemBson` for why icons
+  specifically are not supported yet. Hybrid remains unsupported — no
+  reference document exists for it either.
 
 ### Changed
 

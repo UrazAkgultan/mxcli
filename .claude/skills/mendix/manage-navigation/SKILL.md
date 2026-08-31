@@ -20,10 +20,10 @@ description: "Inspect and change navigation profiles in MDL — home pages, menu
 | 458-497 | Common Patterns |
 | 498-550 | Menu Documents (standalone, reusable) |
 | 551-621 | Offline Profiles |
-| 622-650 | Native Profiles |
-| 651-668 | Checklist |
-| 669-672 | Offline synchronization (`CREATE NAVIGATION … SYNC (…)`) |
-| 673-675 | Menu documents (CREATE OR MODIFY/DESCRIBE/DROP MENU) |
+| 622-671 | Native Profiles |
+| 672-689 | Checklist |
+| 690-693 | Offline synchronization (`CREATE NAVIGATION … SYNC (…)`) |
+| 694-696 | Menu documents (CREATE OR MODIFY/DESCRIBE/DROP MENU) |
 
 <!-- /skill-index -->
 # Navigation Management Skill
@@ -52,7 +52,7 @@ Use when the user asks to:
 
   An invented name (`Mobile`, `Desktop`) is an error, not a new profile: Mendix routes on **User-Agent** to its own kinds, so a profile the platform does not define can never be reached.
 
-  Native profiles are a different document type (`Navigation$NativeNavigationProfile`, no `Kind` property — identified purely by `$Type` + `Name`) and have their own, separate closed set: currently just `NativePhone`. `create or modify navigation NativePhone` creates it the same way the web kinds are created. Hybrid is not supported (no reference document exists for it). A freshly created NativePhone profile has no bottom bar menu items — `create navigation NativePhone (menu (...))` does not fill them in yet, so a page whose layout requires a bottom bar (CE6108) needs its bottom bar item added in Studio Pro until that gap closes.
+  Native profiles are a different document type (`Navigation$NativeNavigationProfile`, no `Kind` property — identified purely by `$Type` + `Name`) and have their own, separate closed set: currently just `NativePhone`. `create or modify navigation NativePhone` creates it the same way the web kinds are created. Hybrid is not supported (no reference document exists for it). A freshly created NativePhone profile has no bottom bar menu items — fill them with a `{ }` block (flat, `OnClick: show page` only, no `Icon:` — see "Native Profiles" below) if the home page's layout requires a bottom bar (CE6108).
 - **Offline Profiles** — An offline profile makes the app work without a connection (a PWA with a local database that syncs). It is not a different document — same properties as its online twin — but it **constrains every page it can reach**, see below.
 - **Home Page** — The default page shown after login. Can be a PAGE or MICROFLOW.
 - **Role-Based Home Pages** — Override the default home page per user role (e.g., admins see a dashboard, users see a task list).
@@ -624,7 +624,7 @@ stored. MDL does not author per-entity sync modes — set those in Studio Pro.
 `NativePhone` is created the same way:
 
 ```sql
-create navigation NativePhone
+create or modify navigation NativePhone
   home page NativeMobile.Home_Native;
 ```
 
@@ -632,15 +632,36 @@ It is a different document type (`Navigation$NativeNavigationProfile`) from the
 web kinds above — no `Kind` property, identified purely by `$Type` + `Name` —
 but the statement and the create-then-fill flow are the same.
 
-**The bottom bar menu is not filled in yet.** Unlike the web `menu (...)` block,
-`create navigation NativePhone (menu (...))` does not write bottom bar items for
-a native profile — a separate, already-tracked gap. If the home page's layout
-has "Bottom bar" enabled, Mendix requires that page to appear in the profile's
-bottom bar menu and reports **CE6108** ("If the bottom bar is enabled on a home
-page, then that page must be included in the bottom bar menu of the native
-navigation profile...") until it is added in Studio Pro. Point the home page at
-a layout with no bottom bar, or add the bottom bar item in Studio Pro, to avoid
-it.
+**The bottom bar is the profile's `{ }` block, reusing the same item syntax as
+the web kinds — but it is flat and page-only.** A native profile's bottom bar
+(`NativePages$BottomBarItem`) has no sub-menus and stores only a page, unlike
+the web `Menu`, so:
+
+```sql
+create or modify navigation NativePhone
+  home page NativeMobile.Home_Native
+  {
+    menu item 'Home' ( OnClick: show page NativeMobile.Home_Native )
+  };
+```
+
+- Every item needs `OnClick: show page …` — any other action (`call microflow`,
+  `call nanoflow`, `sign out`, …) and an item with no action are rejected (the
+  native bottom bar has no other action). A page argument is rejected too.
+- Nested `menu 'caption' { … }` sub-items are rejected — Mendix's bottom bar
+  menu cannot nest.
+- `Icon:` is rejected. mxcli's icon property only ever builds a
+  `Forms$IconCollectionIcon` here, and that has never been confirmed as valid
+  for a native bottom bar item (the one real reference document uses a
+  `Forms$GlyphIcon`, a different, unauthored-by-MDL shape). Add the icon in
+  Studio Pro.
+
+If the home page's layout has "Bottom bar" enabled, Mendix requires that page
+to appear in the profile's bottom bar menu and reports **CE6108** ("If the
+bottom bar is enabled on a home page, then that page must be included in the
+bottom bar menu of the native navigation profile...") until it does. Either
+include the page in the `{ }` block as above, or point the home page at a
+layout with no bottom bar.
 
 A profile with no home page at all (`create navigation NativePhone;` with
 nothing else) is a valid **empty** profile — Mendix requires a home page before
@@ -654,7 +675,7 @@ set, same as leaving a web profile's home page unset.
 - [ ] For an **offline** profile, no page it can reach binds an attribute across more than one association (CE6206)
 - [ ] For an **offline** profile, `progressive web app ( Precaching: true )` is set — without it no page opens offline
 - [ ] `app title` is set — a new project's browser tab reads `Mendix - <page title>` otherwise
-- [ ] For a **native** profile, the home page's layout does not require a bottom bar entry mxcli cannot yet write (CE6108) — or add that entry in Studio Pro
+- [ ] For a **native** profile whose home page's layout requires a bottom bar (CE6108), the `{ }` block includes that page — flat items only, `OnClick: show page` only, no `Icon:` (add icons in Studio Pro)
 - [ ] All PAGE/MICROFLOW targets are fully qualified (`Module.Name`)
 - [ ] Role references in `for` clauses are fully qualified (`Module.Role`)
 - [ ] Menu items are in `{ }` with no `;` between them; sub-menu items in `menu 'caption' { ... }`

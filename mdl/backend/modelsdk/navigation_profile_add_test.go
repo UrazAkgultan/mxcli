@@ -190,10 +190,10 @@ func TestNativeProfileStartsWithNoHomePage(t *testing.T) {
 func TestNativeProfileStartsWithEmptyChildCollections(t *testing.T) {
 	// OfflineEntityConfigs and RoleBasedNativeHomePages are stored EMPTY on the
 	// fixture's own (otherwise configured) document — direct evidence of the
-	// unconfigured state. BottomBarItems is never touched by
-	// UpdateNavigationProfile for native profiles (a separate, tracked gap), so
-	// it must start empty here rather than carrying the fixture's configured
-	// bottom bar item forward.
+	// unconfigured state. BottomBarItems is only rewritten by
+	// UpdateNavigationProfile when the CREATE statement has a MENU block (see
+	// navPatchNativeProfile), so a freshly created profile must start empty here
+	// rather than carrying the fixture's configured bottom bar item forward.
 	for _, tc := range []struct {
 		key    string
 		marker int32

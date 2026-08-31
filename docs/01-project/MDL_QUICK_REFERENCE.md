@@ -925,7 +925,7 @@ alter workflow Module.OrderApproval {
 | Show menu tree | `list navigation menu [Profile];` | One row per item, with the **Address** `alter navigation` takes (`'Admin' > 'Users'`, `'Home'@2`) |
 | Show home pages | `list navigation homes;` | Home page assignments across profiles |
 | Describe navigation | `describe navigation [Profile];` | Full MDL output (round-trippable) |
-| Native home | `home nanoflow Mod.Flow` | A native profile's flow home; mxcli writes a native profile's home pages and sync only |
+| Native home | `home nanoflow Mod.Flow` | A native profile's flow home; mxcli writes a native profile's home pages, sync and bottom bar only |
 | Create/modify navigation | `create or modify navigation Profile ...;` | Writes the clauses it states (a `{ }` block replaces the whole menu) — and **creates** the profile if the project does not have it |
 | Alter navigation | `alter navigation Profile { insert after 'Home' { menu item … } drop 'Old'; … };` | Edits one profile in place: `insert before\|after\|into <item> { … }`, `insert { … }`, `replace <item> with { … }`, `move <item> before\|after\|into <item>`, `drop <item>, …`, `set ( Caption:, OnClick:, Icon: \| none ) on <item>`, `set home page\|microflow M.X [for Role]`, `drop home page for Role`, `set/drop login page`, `set/drop not found page`. `<item>` is a caption path `'Admin' > 'Users'` (`@n` among equal captions). Untouched items stay as stored; a refusal writes nothing |
 | Offline sync | `sync ( sync Mod.Entity all; ... )` | A clause of CREATE NAVIGATION. Modes: `online`, `all`, `where '<xpath>'`, `never`, `none`, `none preserve data`. **Not** Studio Pro's captions — its "All Objects" is `all`, its "By XPath" is `where`. An offline profile downloads nothing without this |
@@ -934,7 +934,7 @@ alter workflow Module.OrderApproval {
 | Profile kinds (web) | `Responsive` · `Phone` · `Tablet` · `ResponsiveOffline` · `PhoneOffline` · `TabletOffline` | A closed set. An invented name (`Mobile`) is an error, not a new profile: the runtime routes on User-Agent to Mendix's own kinds |
 | Profile kinds (native) | `NativePhone` | A separate closed set — different document type (`Navigation$NativeNavigationProfile`, no `Kind` property). Hybrid is not creatable (no reference document exists for it) |
 | Offline profiles | `create or modify navigation TabletOffline ...;` | Same properties as the online twin, but every page the profile can reach may bind an attribute across **at most one** association hop (**CE6206**). Creating one reports the documents that already exceed that |
-| Native profiles | `create or modify navigation NativePhone home page MyModule.Home_Native;` | Bottom bar menu items are not yet written by `create`/`UpdateNavigationProfile` — a home page whose layout requires one needs it added in Studio Pro (**CE6108**) |
+| Native profiles | `create or modify navigation NativePhone home page MyModule.Home_Native { menu item 'Home' ( OnClick: show page MyModule.Home_Native ) };` | The `{ }` block is the bottom bar: flat and page-only — no sub-menus, no `OnClick` other than `show page`, no `Icon:`. Needed when the home page's layout requires a bottom bar (**CE6108**) |
 
 Menu items are the profile's children, in `{ }` after its clauses, with no `;`
 between them: `menu item 'Caption' ( OnClick: show page M.P, Icon: … )`, where

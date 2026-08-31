@@ -484,9 +484,12 @@ DISCONNECT;`,
 -- bound across at most ONE association hop (CE6206). Creating one reports the
 -- documents in the project that already exceed that.
 --
--- A NATIVE profile (Navigation$NativeNavigationProfile, no Kind property) does
--- not yet get its MENU block written -- a home page whose layout requires a
--- bottom bar entry needs it added in Studio Pro until that gap closes (CE6108).`,
+-- A NATIVE profile (Navigation$NativeNavigationProfile, no Kind property) has
+-- a { } block too -- its bottom bar -- but it is FLAT and PAGE-ONLY
+-- (NativePages$BottomBarItem): no nested MENU groups, no OnClick other than
+-- SHOW PAGE, no Icon: (add icons in Studio Pro -- IconCollectionIcon is
+-- unconfirmed for a native bottom bar item). A home page whose layout has
+-- "Bottom bar" enabled must appear in this block, or Mendix reports CE6108.`,
 		Example: `mdl 1;
 CREATE OR MODIFY NAVIGATION Responsive
   APP TITLE 'Order Desk'
@@ -509,7 +512,10 @@ CREATE OR MODIFY NAVIGATION TabletOffline
   };
 
 CREATE OR MODIFY NAVIGATION NativePhone
-  HOME PAGE MyModule.Home_Native;`,
+  HOME PAGE MyModule.Home_Native
+  {
+    MENU ITEM 'Home' ( OnClick: SHOW PAGE MyModule.Home_Native )
+  };`,
 		SeeAlso: []string{"navigation.show"},
 	})
 

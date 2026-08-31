@@ -868,10 +868,10 @@ func menuItemTarget(item *types.NavMenuItem) string {
 // open link, create object — and every `with ( … )` setting prints, and what
 // MDL cannot express is said in a comment rather than left out (ako/mxcli#980).
 //
-// native is true for a NativePhone profile's bottom bar: CREATE NAVIGATION
-// cannot author ANY icon there yet (see navBottomBarItemBson), so every icon —
-// including an IconCollectionIcon, which the web Menu can reproduce — gets the
-// "not reproducible" note instead of an Icon: property.
+// native is true for a NativePhone profile's bottom bar: CREATE NAVIGATION can
+// author only a glyph icon there (see navBottomBarItemBson), so a collection or
+// image icon — which the web Menu can reproduce — gets the "not reproducible"
+// note instead of an Icon: property.
 func printMenuMDL(ctx *ExecContext, w io.Writer, items []*types.NavMenuItem, depth int, reproducer string) {
 	printMenuMDLFor(ctx, w, items, depth, reproducer, false)
 }
@@ -939,11 +939,11 @@ func legacyMenuItemOnClick(item *types.NavMenuItem) string {
 // All three of Mendix's icon elements have a form now. Only the collection one
 // used to, so DESCRIBE emitted a comment for a glyph or image icon — and since
 // CREATE NAVIGATION is a full replacement, re-running that output DELETED the
-// icon it had just declined to describe. A native bottom bar item cannot
-// reproduce any icon yet (navBottomBarItemBson rejects ICON unconditionally),
-// so it always falls through to the note.
+// icon it had just declined to describe. A native bottom bar item can
+// reproduce only a glyph icon (navBottomBarItemBson); a collection or image
+// icon there falls through to the note.
 func menuItemIconMDL(item *types.NavMenuItem, native bool) string {
-	if native {
+	if native && types.MenuIconKindOf(item.IconType) != types.MenuIconGlyph {
 		return ""
 	}
 	switch types.MenuIconKindOf(item.IconType) {
@@ -975,9 +975,9 @@ func menuItemIconMDL(item *types.NavMenuItem, native bool) string {
 // fires only on what is genuinely beyond the language: a stored $Type this
 // build does not know, or a variant whose payload is missing (a glyph with no
 // Code, a named icon with no name) — where emitting a clause would rebuild a
-// DIFFERENT icon rather than the same one. On a native bottom bar item no icon
-// at all is reproducible yet (navBottomBarItemBson rejects ICON
-// unconditionally), so every icon there gets this note. Guessing between
+// DIFFERENT icon rather than the same one. On a native bottom bar item only a
+// glyph icon is reproducible (navBottomBarItemBson); a collection or image
+// icon there gets this note too. Guessing between
 // polymorphic variants is the failure mode that produces a document mxbuild
 // accepts and Studio Pro cannot open.
 func menuItemIconNote(item *types.NavMenuItem, reproducer string, native bool) string {

@@ -1455,11 +1455,14 @@ Headline: **Widgets become first-class MDL rather than a second dialect.** Every
   the profile's `{ }` block as the web kinds do — so a home page whose layout
   requires a bottom bar can be added to it directly, clearing **CE6108**
   instead of needing Studio Pro. The native bottom bar is flat and page-only,
-  unlike the web `Menu`: a nested `MENU 'caption' { … }` group, an `OnClick`
-  other than `SHOW PAGE`, or an `Icon:` on a native menu item is rejected rather than
-  guessed at — see the doc comment on `navBottomBarItemBson` for why icons
-  specifically are not supported yet. Hybrid remains unsupported — no
-  reference document exists for it either.
+  unlike the web `Menu`: a nested `MENU 'caption' { … }` group or an `OnClick`
+  other than `SHOW PAGE` is rejected rather than guessed at. Its icon is a
+  numeric glyph code — `Icon: glyph <code>` — round-tripping through
+  `Forms$GlyphIcon`, the one shape confirmed against a real Studio-Pro-authored
+  NativePhone profile; a collection or image icon (`Forms$IconCollectionIcon`/
+  `Forms$ImageIcon`) remains unconfirmed for a native item and is rejected —
+  see the doc comment on `navBottomBarItemBson`. Hybrid remains unsupported —
+  no reference document exists for it either.
 
 ### Changed
 

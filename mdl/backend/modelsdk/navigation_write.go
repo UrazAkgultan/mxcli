@@ -405,18 +405,16 @@ func navPatchNativeProfile(doc bson.D, spec types.NavigationProfileSpec) (bson.D
 // carry either of those, so both are rejected explicitly rather than silently
 // dropped, matching this project's "no silent unsupported migrations" stance.
 //
-// Icon is deliberately never written here. The one real reference document
-// (native-pwa-migrator's fixtures/native-phone-minimal) has a Forms$GlyphIcon on
-// its bottom bar item, but that is this fixture author's choice, not a Studio
-// Pro create-time default — nativepages.VersionInfos does not mark "caption"'s
-// sibling "icon" as Required, and the web Menu's ICON clause only ever builds a
-// Forms$IconCollectionIcon (navMenuIconBson), which has never been confirmed to
-// be a valid choice for a native BottomBarItem specifically (a different
-// convention on the native side is exactly what the fixture's GlyphIcon shows).
-// Emitting an unconfirmed shape risks the failure this project exists to avoid —
-// a document that builds clean and will not open in Studio Pro — so an ICON
-// clause on a native menu item is rejected until a real Studio-Pro-authored
-// IconCollectionIcon bottom bar item is found to pin it against.
+// Icon: the one real reference document (native-pwa-migrator's
+// fixtures/native-phone-minimal) has a Forms$GlyphIcon on its bottom bar item
+// — a numeric Code, not a qualified name — so that is the one shape written
+// here, from `Icon: glyph <code>` (IconKind glyph). A collection or image icon
+// is still rejected: neither has been confirmed as a valid choice for a native
+// BottomBarItem specifically — the fixture's GlyphIcon is exactly the different
+// convention that makes them unconfirmed. Emitting an unconfirmed shape risks
+// the failure this project exists to avoid — a document that builds clean and
+// will not open in Studio Pro — so they stay rejected until a real
+// Studio-Pro-authored example of either is found to pin against.
 func navBottomBarItemBson(mi types.NavMenuItemSpec) (bson.D, error) {
 	if len(mi.Items) > 0 {
 		return nil, fmt.Errorf("native bottom bar item %q: sub-items are not supported — Mendix's native bottom bar menu is flat", mi.Caption)
@@ -425,16 +423,35 @@ func navBottomBarItemBson(mi types.NavMenuItemSpec) (bson.D, error) {
 	if err != nil {
 		return nil, err
 	}
-	if mi.Icon != "" {
-		return nil, fmt.Errorf("native bottom bar item %q: ICON is not supported yet — Forms$IconCollectionIcon is unconfirmed for native bottom bar items; set it in Studio Pro", mi.Caption)
+	icon, err := navBottomBarIconBson(mi)
+	if err != nil {
+		return nil, err
 	}
 	return bson.D{
 		{Key: "$ID", Value: navID()},
 		{Key: "$Type", Value: "NativePages$BottomBarItem"},
 		{Key: "Caption", Value: navBottomBarCaptionBson(mi.Caption)},
-		{Key: "Icon", Value: nil},
+		{Key: "Icon", Value: icon},
 		{Key: "Page", Value: page},
 	}, nil
+}
+
+// navBottomBarIconBson is a bottom bar item's Icon: a Forms$GlyphIcon for a
+// glyph, nil for no icon. That is the one icon shape pinned against a real
+// Studio-Pro-authored document — see the fixture comment on
+// navigation_bottombar_test.go — so a collection or image icon is refused.
+func navBottomBarIconBson(mi types.NavMenuItemSpec) (any, error) {
+	switch {
+	case mi.IconKind == types.MenuIconGlyph:
+		return bson.D{
+			{Key: "$ID", Value: navID()},
+			{Key: "$Type", Value: "Forms$GlyphIcon"},
+			{Key: "Code", Value: int32(mi.IconCode)},
+		}, nil
+	case mi.Icon != "" || mi.IconKind != types.MenuIconNone:
+		return nil, fmt.Errorf("native bottom bar item %q: only a glyph icon is supported — a collection or image icon is unconfirmed for native bottom bar items; use Icon: glyph <code>, or set it in Studio Pro", mi.Caption)
+	}
+	return nil, nil
 }
 
 // navBottomBarPage is the page a bottom bar item opens. The executor hands the

@@ -641,7 +641,7 @@ the web `Menu`, so:
 create or modify navigation NativePhone
   home page NativeMobile.Home_Native
   {
-    menu item 'Home' ( OnClick: show page NativeMobile.Home_Native )
+    menu item 'Home' ( OnClick: show page NativeMobile.Home_Native, Icon: glyph 57377 )
   };
 ```
 
@@ -650,11 +650,11 @@ create or modify navigation NativePhone
   native bottom bar has no other action). A page argument is rejected too.
 - Nested `menu 'caption' { … }` sub-items are rejected — Mendix's bottom bar
   menu cannot nest.
-- `Icon:` is rejected. mxcli's icon property only ever builds a
-  `Forms$IconCollectionIcon` here, and that has never been confirmed as valid
-  for a native bottom bar item (the one real reference document uses a
-  `Forms$GlyphIcon`, a different, unauthored-by-MDL shape). Add the icon in
-  Studio Pro.
+- `Icon: glyph <code>` is the one confirmed icon shape for a native bottom bar
+  item — a numeric code, matching the one real reference document
+  (`Forms$GlyphIcon`). A collection or image icon (`Forms$IconCollectionIcon`/
+  `Forms$ImageIcon`) is rejected — that shape has never been confirmed as
+  valid here; add it in Studio Pro instead.
 
 If the home page's layout has "Bottom bar" enabled, Mendix requires that page
 to appear in the profile's bottom bar menu and reports **CE6108** ("If the
@@ -675,7 +675,7 @@ set, same as leaving a web profile's home page unset.
 - [ ] For an **offline** profile, no page it can reach binds an attribute across more than one association (CE6206)
 - [ ] For an **offline** profile, `progressive web app ( Precaching: true )` is set — without it no page opens offline
 - [ ] `app title` is set — a new project's browser tab reads `Mendix - <page title>` otherwise
-- [ ] For a **native** profile whose home page's layout requires a bottom bar (CE6108), the `{ }` block includes that page — flat items only, `OnClick: show page` only, no `Icon:` (add icons in Studio Pro)
+- [ ] For a **native** profile whose home page's layout requires a bottom bar (CE6108), the `{ }` block includes that page — flat items only, `OnClick: show page` only; `Icon: glyph <code>` is supported, a collection or image icon is not (add those in Studio Pro)
 - [ ] All PAGE/MICROFLOW targets are fully qualified (`Module.Name`)
 - [ ] Role references in `for` clauses are fully qualified (`Module.Role`)
 - [ ] Menu items are in `{ }` with no `;` between them; sub-menu items in `menu 'caption' { ... }`

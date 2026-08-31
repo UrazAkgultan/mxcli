@@ -12,7 +12,7 @@ package modelsdkbackend
 import (
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
@@ -48,7 +48,10 @@ func TestNavCaptionBson_MatchesTheFixtureShape(t *testing.T) {
 // The regression this fixes is on the caption, only reachable through the
 // full menu item — assert on the wiring, not just the helper.
 func TestNavMenuItemBson_CaptionMarkerMatchesTheFixture(t *testing.T) {
-	item := navMenuItemBson(types.NavMenuItemSpec{Caption: "Home", Page: "M.Home"})
+	item, err := navMenuItemBson(types.NavMenuItemSpec{Caption: "Home", Page: "M.Home"})
+	if err != nil {
+		t.Fatalf("navMenuItemBson: %v", err)
+	}
 	caption, ok := profileKey(item, "Caption")
 	if !ok {
 		t.Fatal("no Caption key at all")

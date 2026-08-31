@@ -487,9 +487,10 @@ DISCONNECT;`,
 -- A NATIVE profile (Navigation$NativeNavigationProfile, no Kind property) has
 -- a { } block too -- its bottom bar -- but it is FLAT and PAGE-ONLY
 -- (NativePages$BottomBarItem): no nested MENU groups, no OnClick other than
--- SHOW PAGE, no Icon: (add icons in Studio Pro -- IconCollectionIcon is
--- unconfirmed for a native bottom bar item). A home page whose layout has
--- "Bottom bar" enabled must appear in this block, or Mendix reports CE6108.`,
+-- SHOW PAGE. Its icon is a numeric glyph code -- Icon: GLYPH <code> -- not a
+-- qualified name; a collection or image icon is unconfirmed for a native
+-- bottom bar item and rejected. A home page whose layout has "Bottom bar"
+-- enabled must appear in this block, or Mendix reports CE6108.`,
 		Example: `mdl 1;
 CREATE OR MODIFY NAVIGATION Responsive
   APP TITLE 'Order Desk'
@@ -514,7 +515,7 @@ CREATE OR MODIFY NAVIGATION TabletOffline
 CREATE OR MODIFY NAVIGATION NativePhone
   HOME PAGE MyModule.Home_Native
   {
-    MENU ITEM 'Home' ( OnClick: SHOW PAGE MyModule.Home_Native )
+    MENU ITEM 'Home' ( OnClick: SHOW PAGE MyModule.Home_Native, Icon: GLYPH 57377 )
   };`,
 		SeeAlso: []string{"navigation.show"},
 	})

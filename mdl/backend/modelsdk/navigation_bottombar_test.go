@@ -10,10 +10,11 @@
 //	  Page: "NativeMobile.Home_Native" }
 //
 // (marker re-verified directly against the fixture's raw BSON, not copied from
-// navCaptionBson — see navBottomBarCaptionBson's doc comment). mxcli never
-// writes Icon (see navBottomBarItemBson's doc comment), so these tests check
-// the four keys mxcli owns and the two malformed-input rejections that keep it
-// from guessing a shape Studio Pro has never confirmed.
+// navCaptionBson — see navBottomBarCaptionBson's doc comment). mxcli writes
+// Icon only as a Forms$GlyphIcon (see navBottomBarItemBson's doc comment), so
+// these tests check the four keys mxcli owns, glyph-icon acceptance, and the
+// rejections that keep it from guessing a shape Studio Pro has never
+// confirmed.
 package modelsdkbackend
 
 import (
@@ -37,7 +38,8 @@ func TestNavBottomBarItemBson_MatchesTheFixtureShape(t *testing.T) {
 	if v, _ := profileKey(got, "Page"); v != "NativeMobile.Home_Native" {
 		t.Errorf("Page = %v", v)
 	}
-	// Never written — see navBottomBarItemBson's doc comment.
+	// No icon given — Icon stays an explicit null. See
+	// TestNavBottomBarItemBson_AcceptsGlyphIcon for the non-nil case.
 	if v, ok := profileKey(got, "Icon"); !ok || v != nil {
 		t.Errorf("Icon = %#v, want an explicit null", v)
 	}
@@ -101,11 +103,37 @@ func TestNavBottomBarItemBson_RequiresAPage(t *testing.T) {
 }
 
 func TestNavBottomBarItemBson_RejectsIcon(t *testing.T) {
-	_, err := navBottomBarItemBson(types.NavMenuItemSpec{
-		Caption: "Home", Page: "M.Home", Icon: "Atlas_Core.Atlas.home",
+	for name, spec := range map[string]types.NavMenuItemSpec{
+		"collection icon": {Caption: "Home", Page: "M.Home", Icon: "Atlas_Core.Atlas.home"},
+		"image icon":      {Caption: "Home", Page: "M.Home", Icon: "M.Images.Logo", IconKind: types.MenuIconImage},
+	} {
+		if _, err := navBottomBarItemBson(spec); err == nil {
+			t.Errorf("%s: expected an error — only a glyph icon is confirmed for native bottom bar items", name)
+		}
+	}
+}
+
+// Matches the fixture's exact shape: { $Type: "Forms$GlyphIcon", Code: 57377 }.
+func TestNavBottomBarItemBson_AcceptsGlyphIcon(t *testing.T) {
+	got, err := navBottomBarItemBson(types.NavMenuItemSpec{
+		Caption: "Home", Page: "NativeMobile.Home_Native", IconKind: types.MenuIconGlyph, IconCode: 57377,
 	})
-	if err == nil {
-		t.Fatal("expected an error for ICON — Forms$IconCollectionIcon is unconfirmed for native bottom bar items")
+	if err != nil {
+		t.Fatalf("navBottomBarItemBson: %v", err)
+	}
+	icon, ok := profileKey(got, "Icon")
+	if !ok || icon == nil {
+		t.Fatal("Icon key missing or null, want a Forms$GlyphIcon")
+	}
+	d, ok := icon.(bson.D)
+	if !ok {
+		t.Fatalf("Icon is %T, want bson.D", icon)
+	}
+	if v, _ := profileKey(d, "$Type"); v != "Forms$GlyphIcon" {
+		t.Errorf("Icon.$Type = %v, want Forms$GlyphIcon", v)
+	}
+	if v, _ := profileKey(d, "Code"); v != int32(57377) {
+		t.Errorf("Icon.Code = %v (%T), want int32 57377", v, v)
 	}
 }
 

@@ -474,14 +474,10 @@ func navBottomBarPage(mi types.NavMenuItemSpec) (string, error) {
 
 // navBottomBarCaptionBson builds a BottomBarItem's Caption (Texts$Text).
 //
-// Deliberately NOT navCaptionBson: that helper's Items marker is 1, but the
-// native-phone-minimal fixture's own Texts$Text.Items — on this same
-// BottomBarItem's Caption, on its sibling MenuItem's Caption, and on the web
-// profile's AppTitle — is uniformly marker 3 (confirmed by dumping the fixture's
-// raw BSON), matching modelsdk/codec's own default for an unregistered PartList
-// child type (Texts$Translation has no codec.RegisterListMarker override).
-// navCaptionBson's marker 1 was not re-verified here — it is a separate,
-// pre-existing write path (web menu captions) outside this change's scope.
+// Written separately from navCaptionBson (rather than calling it) because this
+// helper predates that one's marker fix and the two write paths (native bottom
+// bar vs. web menu items) are independent; both now emit the same marker-3
+// shape — see navCaptionBson's doc comment.
 func navBottomBarCaptionBson(text string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: navID()},
@@ -631,6 +627,16 @@ func navMenuIconBson(spec types.NavMenuItemSpec) interface{} {
 	return append(doc, bson.E{Key: "Image", Value: spec.Icon})
 }
 
+// navCaptionBson builds a web MENU ITEM's caption (Texts$Text).
+//
+// Items marker is 3, not 1: confirmed by walking every Texts$Text.Items
+// occurrence (7300+ across two real Studio-Pro-authored fixtures, including
+// this exact call site — a web profile's Menu.Items[…].Caption — plus that
+// same profile's AppTitle and a NativePhone profile's BottomBarItem.Caption,
+// see navBottomBarCaptionBson) — marker 3 in every single case, matching
+// modelsdk/codec's own default for an unregistered PartList child type
+// (Texts$Translation has no codec.RegisterListMarker override — see
+// modelsdk/codec/defaults.go's lookupListMarker).
 func navCaptionBson(text string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: navID()},

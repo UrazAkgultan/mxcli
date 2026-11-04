@@ -20,10 +20,10 @@ description: "Inspect and change navigation profiles in MDL — home pages, menu
 | 458-497 | Common Patterns |
 | 498-550 | Menu Documents (standalone, reusable) |
 | 551-621 | Offline Profiles |
-| 622-671 | Native Profiles |
-| 672-689 | Checklist |
-| 690-693 | Offline synchronization (`CREATE NAVIGATION … SYNC (…)`) |
-| 694-696 | Menu documents (CREATE OR MODIFY/DESCRIBE/DROP MENU) |
+| 622-673 | Native Profiles |
+| 674-691 | Checklist |
+| 692-695 | Offline synchronization (`CREATE NAVIGATION … SYNC (…)`) |
+| 696-698 | Menu documents (CREATE OR MODIFY/DESCRIBE/DROP MENU) |
 
 <!-- /skill-index -->
 # Navigation Management Skill
@@ -624,6 +624,7 @@ stored. MDL does not author per-entity sync modes — set those in Studio Pro.
 `NativePhone` is created the same way:
 
 ```sql
+mdl 1;
 create or modify navigation NativePhone
   home page NativeMobile.Home_Native;
 ```
@@ -638,6 +639,7 @@ the web kinds — but it is flat and page-only.** A native profile's bottom bar
 the web `Menu`, so:
 
 ```sql
+mdl 1;
 create or modify navigation NativePhone
   home page NativeMobile.Home_Native
   {
